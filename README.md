@@ -142,4 +142,4 @@ The contents of `/src/test/resources/example/cashcard/expected.json` file are as
 You can verify the build is successful by using `./gradlew build` command.
 
 At this moment, the directory structure looks like this.
-<img width="1131" alt="image" src="https://github.com/user-attachments/assets/62654649-7aec-4d24-9847-f77fcd2c32f6">
+<img width="1131" alt="image" src="https://github.com/user-attachments/assets/f88bb976-fdd5-45e6-82dc-820840737e92">
