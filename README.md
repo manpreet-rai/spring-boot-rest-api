@@ -123,7 +123,7 @@ public class CashCardJsonTest {
 }
 ```
 
-Also, the contents of `src/main/java/example/cashcard/CashCard.java` which is a record are as follows:
+The contents of `src/main/java/example/cashcard/CashCard.java` which is a record are as follows:
 ```java
 package example.cashcard;
 
@@ -131,10 +131,15 @@ record CashCard(Long id, Double amount) {
 }
 ```
 
-Finally, the contents of `/src/test/resources/example/cashcard/expected.json` file are as follows:
+The contents of `/src/test/resources/example/cashcard/expected.json` file are as follows:
 ```json
 {
   "id": 99,
   "amount": 123.45
 }
 ```
+
+You can verify the build is successful by using `./gradlew build` command.
+
+At this moment, the directory structure looks like this.
+<img width="1131" alt="image" src="https://github.com/user-attachments/assets/62654649-7aec-4d24-9847-f77fcd2c32f6">
