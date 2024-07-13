@@ -32,6 +32,8 @@ public class CashCardJsonTest {
      * That object is created at application's boot time and is passed on when needed anywhere.
      * This concept is similar to singleton in Laravel (Dependency Injection, here IoC)
      * <p>
+     * Even though @Autowired is a form of Spring dependency injection, it’s best used only in tests.
+     * <p>
      * CashCard is a record, we created in our src/main.
      * It behaves like a struct datatype, which is used to store data.
      */
