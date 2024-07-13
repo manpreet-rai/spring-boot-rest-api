@@ -202,10 +202,10 @@ The response to a successful Read request has a body containing the JSON represe
 Response:
   Status Code: 200
   Body:
-        {
-          "id": 123,
-          "amount": 25.00
-        }
+          {
+            "id": 123,
+            "amount": 25.00
+          }
 ```
 As we progress through this course, you’ll learn how to implement all of the remaining CRUD operations as well.
 
@@ -221,7 +221,7 @@ In this lesson, you’ll annotate a class with a Spring Annotation, which direct
 In Spring Web, Requests are handled by Controllers. In this lesson, you’ll use the more specific RestController:
 ```java
 @RestController
-  class CashCardController {
+class CashCardController {
 }
 ```
 That’s all it takes to tell Spring: **“create a REST Controller”**. The Controller gets injected into Spring Web, which routes API requests (handled by the Controller) to the correct method.
@@ -236,13 +236,13 @@ private CashCard findById(Long requestedId) {
 Since REST says that Read endpoints should use the HTTP GET method, you need to tell Spring to route requests to the method only on GET requests. You can use @GetMapping annotation, which needs the URI Path:
 ```java
 @GetMapping("/cashcards/{requestedId}")
-  private CashCard findById(Long requestedId) {
+private CashCard findById(Long requestedId) {
 }
 ```
 Spring needs to know how to get the value of the requestedId parameter. This is done using the @PathVariable annotation. The fact that the parameter name matches the {requestedId} text within the @GetMapping parameter allows Spring to assign (inject) the correct value to the requestedId variable:
 ```java
 @GetMapping("/cashcards/{requestedId}")
-  private CashCard findById(@PathVariable Long requestedId) {
+private CashCard findById(@PathVariable Long requestedId) {
 }
 ```
 REST says that the Response needs to contain a Cash Card in its body, and a Response code of 200 (OK). Spring Web provides the ResponseEntity class for this purpose. It also provides several utility methods to produce Response Entities. Here, you can use ResponseEntity to create a ResponseEntity with code 200 (OK), and a body containing a CashCard. The final implementation looks like this:
@@ -251,8 +251,8 @@ REST says that the Response needs to contain a Cash Card in its body, and a Resp
 class CashCardController {
   @GetMapping("/cashcards/{requestedId}")
   private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
-     CashCard cashCard = /* Here would be the code to retrieve the CashCard */;
-     return ResponseEntity.ok(cashCard);
+    CashCard cashCard = /* Here would be the code to retrieve the CashCard */;
+    return ResponseEntity.ok(cashCard);
   }
 }
 ```
@@ -280,56 +280,56 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CashCardApplicationTests {
 
-	/**
-	 * We've asked Spring to inject a test helper that’ll allow us to make
-	 * HTTP requests to the locally running application.
-	 */
-	@Autowired
-	TestRestTemplate restTemplate;
+  /**
+   * We've asked Spring to inject a test helper that’ll allow us to make
+   * HTTP requests to the locally running application.
+   */
+  @Autowired
+  TestRestTemplate restTemplate;
 
-	@Test
-	void shouldReturnACashCardWhenDataIsSaved() {
-		/**
-		 * Here we use restTemplate to make an HTTP GET request to our application endpoint /cashcards/99.
-		 * restTemplate will return a ResponseEntity, which we've captured in a variable we've named response.
-		 * ResponseEntity is another helpful Spring object that provides valuable information about what happened with our request.
-		 * We'll use this information throughout our tests in this course.
-		 */
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards/99", String.class);
+  @Test
+  void shouldReturnACashCardWhenDataIsSaved() {
+    /**
+     * Here we use restTemplate to make an HTTP GET request to our application endpoint /cashcards/99.
+     * restTemplate will return a ResponseEntity, which we've captured in a variable we've named response.
+     * ResponseEntity is another helpful Spring object that provides valuable information about what happened with our request.
+     * We'll use this information throughout our tests in this course.
+     */
+    ResponseEntity<String> response = restTemplate.getForEntity("/cashcards/99", String.class);
 
-		/**
-		 * We can inspect many aspects of the response, including the HTTP Response Status code,
-		 * which we expect to be 200 OK.
-		 */
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    /**
+     * We can inspect many aspects of the response, including the HTTP Response Status code,
+     * which we expect to be 200 OK.
+     */
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
-		/**
-		 * This converts the response String into a JSON-aware object with lots of helper methods.
-		 */
-		DocumentContext documentContext = JsonPath.parse(response.getBody());
+    /**
+     * This converts the response String into a JSON-aware object with lots of helper methods.
+     */
+    DocumentContext documentContext = JsonPath.parse(response.getBody());
 
-		/**
-		 * We expect that when we request a Cash Card with id of 99 and amount of 123.45
-		 * a JSON object will be returned with something in the id field.
-		 * Assert that the id, and amount are valid.
-		 */
-		Number id = (Number) documentContext.read("$.id");
-		assertThat(id).isEqualTo(99);
+    /**
+     * We expect that when we request a Cash Card with id of 99 and amount of 123.45
+     * a JSON object will be returned with something in the id field.
+     * Assert that the id, and amount are valid.
+     */
+    Number id = (Number) documentContext.read("$.id");
+    assertThat(id).isEqualTo(99);
 
-		Double amount = (Double) documentContext.read("$.amount");
-		assertThat(amount).isEqualTo(123.45);
-	}
+    Double amount = (Double) documentContext.read("$.amount");
+    assertThat(amount).isEqualTo(123.45);
+  }
 
-	/**
-	 * Let's write a new test that expects to ignore Cash Cards that do not have an id of 99.
-	 * Use 1000, as we have in previous tests.
-	 */
-	@Test
-	void shouldNotReturnACashCardWithAnUnknownId() {
-		ResponseEntity<String> response = restTemplate.getForEntity("/cashcards/1000", String.class);
-		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-		assertThat(response.getBody()).isBlank();
-	}
+  /**
+   * Let's write a new test that expects to ignore Cash Cards that do not have an id of 99.
+   * Use 1000, as we have in previous tests.
+   */
+  @Test
+  void shouldNotReturnACashCardWithAnUnknownId() {
+    ResponseEntity<String> response = restTemplate.getForEntity("/cashcards/1000", String.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    assertThat(response.getBody()).isBlank();
+  }
 }
 ```
 
@@ -354,26 +354,27 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/cashcards")
 public class CashCardController {
 
-    /**
-     * If @RequestMapping is not used, @GetMapping must mention whole path like /cashcards/{requestedId}
-     * @GetMapping marks a method as a handler method.
-     * GET requests that match /cashcards/{requestedID} will be handled by this method.
-     * <p>
-     * @PathVariable makes Spring Web aware of the requestedId supplied in the HTTP request.
-     * Now it’s available for us to use in our handler method.
-     */
-    @GetMapping("/{requestedId}")
-    private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
-        if (requestedId.equals(99L)) {
-            CashCard cashCard = new CashCard(99L, 123.45);
-            return ResponseEntity.ok(cashCard);
-        }
-        else {
-            return ResponseEntity.notFound().build();
-        }
+  /**
+   * If @RequestMapping is not used, @GetMapping must mention whole path like /cashcards/{requestedId}
+   * @GetMapping marks a method as a handler method.
+   * GET requests that match /cashcards/{requestedID} will be handled by this method.
+   * <p>
+   * @PathVariable makes Spring Web aware of the requestedId supplied in the HTTP request.
+   * Now it’s available for us to use in our handler method.
+   */
+  @GetMapping("/{requestedId}")
+  private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
+    if (requestedId.equals(99L)) {
+      CashCard cashCard = new CashCard(99L, 123.45);
+      return ResponseEntity.ok(cashCard);
     }
+    else {
+      return ResponseEntity.notFound().build();
+    }
+  }
 }
 ```
 
 Now at this point, the directory structure looks like this:
 
+<img width="1131" alt="image" src="https://github.com/user-attachments/assets/57fdbed3-cfed-421a-9acc-a00b21bc6b61">
