@@ -172,10 +172,10 @@ Response
 - Body
 
 The power of REST lies in the way it references a Resource, and what the Request and Response look like for each CRUD operation. Let’s take a look at what our API will look like when we're done with this course:
-- For CREATE: use HTTP method POST.
-- For READ: use HTTP method GET.
-- For UPDATE: use HTTP method PUT.
-- For DELETE: use HTTP method DELETE.
+- For **CREATE**: use HTTP method **POST**.
+- For **READ**: use HTTP method **GET**.
+- For **UPDATE**: use HTTP method **PUT**.
+- For **DELETE**: use HTTP method **DELETE**.
 
 The endpoint URI for Cash Card objects begins with the `/cashcards` keyword. READ, UPDATE, and DELETE operations require we provide the unique identifier of the target resource. The application needs this unique identifier in order to perform the correct action on exactly the correct resource. For example, to READ, UPDATE, or DELETE a Cash Card with the identifier of "42", the endpoint would be `/cashcards/42`.
 
