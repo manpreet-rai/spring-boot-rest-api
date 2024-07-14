@@ -37,7 +37,7 @@ Software development teams love to move fast. So how do you go fast forever? By 
 - **Refactor**: Look for opportunities to simplify, reduce duplication, or otherwise improve the code without changing any behavior—to refactor.
 - **Repeat**!
 
-Throughout the labs in this course, you'll practice the Red, Green, Refactor loop to develop the Family Cash Card REST API.
+Throughout this course, you'll practice the Red, Green, Refactor loop to develop the Family Cash Card REST API.
 
 Create a Test file first, write some tests, let them fail. Then turn them right before we move on to code. Create a Json Test file at `src/test/java/example/cashcard/CashCardJsonTest.java`
 You need to explicitly import statically org.assertj library’s assertThat method. Also some annotations are needed like @JsonTest above the class name.
