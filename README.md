@@ -11,8 +11,8 @@ Add Spring Web as dependency
 <img width="555" alt="image" src="https://github.com/user-attachments/assets/d5d19114-9d31-43c6-8cca-f3c52e39864b">
 
 Download and extract the code, and use `./gradlew build` to finish building the generated code.
-We will be implementing the following API contract for now.
-```Request
+We will be implementing the following **API contract** for now.
+```http request
   URI: /cashcards/{id}
   HTTP Verb: GET
   Body: None
