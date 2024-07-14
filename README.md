@@ -1,3 +1,5 @@
+![image](https://github.com/user-attachments/assets/d4d81c03-459e-4b28-91a2-b78c2b36dbb1)
+
 # REST API with Spring Boot
 
 Use spring initializr to with following settings for now.
@@ -431,8 +433,8 @@ You might immediately wonder: Where is the implementation of the CashCardReposit
 As we’ve learned, there are typically trade-offs. For example the CrudRepository generates SQL statements to read and write your data, which is useful for many cases, but sometimes you need to write your own custom SQL statements for specific use cases.
 
 Look into the following files:
- - `src/main/resources/schema.sql`
- - `src/test/resources/data.sql`
+- `src/main/resources/schema.sql`
+- `src/test/resources/data.sql`
 
 **Add Spring Data Dependencies**
 
@@ -770,8 +772,10 @@ Success! We're now using real data in our API.
 > **Learning Moment:** `main` vs `test` resources <br>
 Notice that `src/main/resources/schema.sql` and `src/test/resources/data.sql` are in different resources locations.
 
-Remember that our Cash Card with `ID 99` and `Amount 123.45` is a **fake**, made-up Cash Card that we only want to use in our tests. 
+Remember that our Cash Card with `ID 99` and `Amount 123.45` is a **fake**, made-up Cash Card that we only want to use in our tests.
 We don't want our "real" or production system to load Cash Card 99 into the system.
 
 Spring has provided a powerful feature for us: it allows us to separate our **test-only resources** from our **main resources** when needed.
 Our scenario here is a common example of this: **our database schema is always the same, but our data is not!**
+
+<img width="1131" alt="image" src="https://github.com/user-attachments/assets/1997973d-dd4e-409c-9de9-964addad867f">
