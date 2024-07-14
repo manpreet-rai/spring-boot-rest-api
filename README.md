@@ -4,11 +4,11 @@
 
 Use spring initializr to with following settings for now.
 
-![initializr-metadata](https://github.com/user-attachments/assets/344f4272-063f-4601-a98e-523302a4971c)
+<img width="555" alt="image" src="https://github.com/user-attachments/assets/344f4272-063f-4601-a98e-523302a4971c">
 
 Add Spring Web as dependency
 
-![initializr-dependencies](https://github.com/user-attachments/assets/d5d19114-9d31-43c6-8cca-f3c52e39864b)
+<img width="555" alt="image" src="https://github.com/user-attachments/assets/d5d19114-9d31-43c6-8cca-f3c52e39864b">
 
 Download and extract the code, and use `./gradlew build` to finish building the generated code.
 We will be implementing the following API contract for now.
