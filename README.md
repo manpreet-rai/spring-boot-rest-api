@@ -754,7 +754,7 @@ but was: 404 NOT_FOUND
 
 > **Translation:** Our repository can't find CashCard with id of 99. So, why not?
 
-Although we've helped Spring Data create a test database by un-commenting `schema.sql`, it's still an **empty database**.
+Although we've helped Spring Data create a test database by creating `schema.sql`, it's still an **empty database**.
 
 Let's go load some test data from `data.sql`.
 
