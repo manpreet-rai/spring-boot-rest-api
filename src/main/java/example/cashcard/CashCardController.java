@@ -6,6 +6,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+// Add this import
+import java.util.Optional;
+
 /**
  * @RestController
  * This tells Spring that this class is a Component of type RestController and capable of handling HTTP requests.
@@ -18,6 +21,19 @@ import org.springframework.web.bind.annotation.RestController;
 public class CashCardController {
 
     /**
+     * Declare private object for CashCardRepository
+     */
+    private final CashCardRepository cashCardRepository;
+
+    /**
+     * Let the autoconfiguration and constructor injection handle initialization.
+     * The constructor is private not public. Spring can handle its auto-initialization.
+     */
+    private CashCardController(CashCardRepository cashCardRepository) {
+        this.cashCardRepository = cashCardRepository;
+    }
+
+    /**
      * If @RequestMapping is not used, @GetMapping must mention whole path like /cashcards/{requestedId}
      * @GetMapping marks a method as a handler method.
      * GET requests that match /cashcards/{requestedID} will be handled by this method.
@@ -27,9 +43,17 @@ public class CashCardController {
      */
     @GetMapping("/{requestedId}")
     private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
-        if (requestedId.equals(99L)) {
-            CashCard cashCard = new CashCard(99L, 123.45);
-            return ResponseEntity.ok(cashCard);
+        /**
+         * Optional allows to fetch conditional data, which may or may not be there in database.
+         * And this can be used further to get the data or just build an empty response.
+         */
+        Optional<CashCard> optionalCashCard = cashCardRepository.findById(requestedId);
+
+        /**
+         * If data based on requestedId exists, get the data otherwise build empty response.
+         */
+        if (optionalCashCard.isPresent()) {
+            return ResponseEntity.ok(optionalCashCard.get());
         }
         else {
             return ResponseEntity.notFound().build();

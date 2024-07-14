@@ -51,10 +51,10 @@ class CashCardApplicationTests {
 		 * a JSON object will be returned with something in the id field.
 		 * Assert that the id, and amount are valid.
 		 */
-		Number id = (Number) documentContext.read("$.id");
+		Number id = documentContext.read("$.id");
 		assertThat(id).isEqualTo(99);
 
-		Double amount = (Double) documentContext.read("$.amount");
+		Double amount = documentContext.read("$.amount");
 		assertThat(amount).isEqualTo(123.45);
 	}
 

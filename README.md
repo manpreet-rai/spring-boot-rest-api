@@ -1,9 +1,11 @@
 # REST API with Spring Boot
 
 Use spring initializr to with following settings for now.
+
 ![initializr-metadata](https://github.com/user-attachments/assets/344f4272-063f-4601-a98e-523302a4971c)
 
 Add Spring Web as dependency
+
 ![initializr-dependencies](https://github.com/user-attachments/assets/d5d19114-9d31-43c6-8cca-f3c52e39864b)
 
 Download and extract the code, and use `./gradlew build` to finish building the generated code.
@@ -177,12 +179,14 @@ The endpoint URI for Cash Card objects begins with the `/cashcards` keyword. REA
 Notice that we do not provide a unique identifier for the CREATE operation. As we'll learn in more detail in future lessons, CREATE will have the side effect of creating a new Cash Card with a new unique ID. No identifier should be provided when creating a new Cash Card because the application will create a new unique identifier for us.
 
 The chart below has more details about RESTful CRUD operations.
-| Operation |	API Endpoint | HTTP Method	Response Status |
-|-----------|--------------|------------------------------|
-|Create	| /`cashcards` | POST	201 (CREATED) |
-|Read	| /`cashcards/{id}` | GET	200 (OK) |
-|Update	| `/cashcards/{id}` | PUT	204 (NO CONTENT) |
-|Delete	| `/cashcards/{id}` | DELETE	204 (NO CONTENT) |
+
+| Operation | API Endpoint      | HTTP Method Response Status |
+|-----------|-------------------|-----------------------------|
+| Create    | /`cashcards`      | POST 201 (CREATED)          |
+| Read      | /`cashcards/{id}` | GET 200 (OK)                |
+| Update    | /`cashcards/{id}` | PUT 204 (NO CONTENT)        |
+| Delete    | /`cashcards/{id}` | DELETE 204 (NO CONTENT)     |
+
 
 The Request Body:
 When following REST conventions to create or update a resource, we need to submit data to the API. This is often referred to as the request body. The CREATE and UPDATE operations require that a request body contain the data needed to properly create or update the resource. For example, a new Cash Card might have a beginning cash value amount, and an UPDATE operation might change that amount.
@@ -202,10 +206,10 @@ The response to a successful Read request has a body containing the JSON represe
 Response:
   Status Code: 200
   Body:
-          {
-            "id": 123,
-            "amount": 25.00
-          }
+        {
+          "id": 123,
+          "amount": 25.00
+        }
 ```
 As we progress through this course, you’ll learn how to implement all of the remaining CRUD operations as well.
 
@@ -378,3 +382,396 @@ public class CashCardController {
 Now at this point, the directory structure looks like this:
 
 <img width="1131" alt="image" src="https://github.com/user-attachments/assets/57fdbed3-cfed-421a-9acc-a00b21bc6b61">
+
+### Repositories & Spring Data
+At this point in our development journey, we’ve got a system which returns a hard-coded Cash Card record from our Controller. However, what we really want is to return real data, from a database. So, let’s continue our Steel Thread by switching our attention to the database!
+
+Spring Data works with Spring Boot to make database integration simple. Before we jump in, let’s briefly talk about Spring Data’s architecture.
+
+**Controller-Repository Architecture**
+The Separation of Concerns principle states that well-designed software should be modular, with each module having distinct and separate concerns from any other module.
+
+Up until now, our codebase only returns a hard-coded response from the Controller. This setup violates the Separation of Concerns principle by mixing the concerns of a Controller, which is an abstraction of a web interface, with the concerns of reading and writing data to a data store, such as a database. In order to solve this, we’ll use a common software architecture pattern to enforce data management separation via the Repository pattern.
+
+A common architectural framework that divides these layers, typically by function or value, such as business, data, and presentation layers, is called Layered Architecture. In this regard, we can think of our Repository and Controller as two layers in a Layered Architecture. The Controller is in a layer near the Client (as it receives and responds to web requests) while the Repository is in a layer near the data store (as it reads from and writes to the data store). There may be intermediate layers as well, as dictated by business needs. We don't need any additional layers, at least not yet!
+
+The Repository is the interface between the application and the database, and provides a common abstraction for any database, making it easier to switch to a different database when needed.
+
+<img width="557" alt="image" src="https://github.com/user-attachments/assets/03d62ba4-a14f-4951-9dbb-bad498603b4f">
+
+In good news, Spring Data provides a collection of robust data management tools, including implementations of the Repository pattern.
+
+**Choosing a Database**
+For our database selection, we’ll use an embedded, in-memory database. “Embedded” simply means that it’s a Java library, so it can be added to the project just like any other dependency. “In-memory” means that it stores data in memory only, as opposed to persisting data in permanent, durable storage. At the same time, our in-memory database is largely compatible with production-grade relational database management systems (RDBMS) like MySQL, SQL Server, and many others. Specifically, it uses JDBC (the standard Java library for database connectivity) and SQL (the standard database query language).
+
+<img width="556" alt="image" src="https://github.com/user-attachments/assets/64fdad64-1f83-4f89-b050-8e0468738946">
+
+There are tradeoffs to using an in-memory database instead of a persistent database. On one hand, in-memory allows you to develop without installing a separate RDBMS, and ensures that the database is in the same state (i.e., empty) on every test run. However, you do need a persistent database for the live "production" application. This leads to a Dev-Prod Parity mismatch: Your application might behave differently when running the in-memory database than when running in production.
+
+The specific in-memory database we’ll use is H2. Fortunately, H2 is highly compatible with other relational databases, so dev-prod parity won’t be a big issue. We’ll use H2 for convenience for local development, but we want to recognize the tradeoffs.
+
+**Auto Configuration**
+In the lab, all we need for full database functionality is to add two dependencies. This wonderfully showcases one of the most powerful features of Spring Boot: Auto Configuration. Without Spring Boot, we’d have to configure Spring Data to speak to H2. However, because we’ve included the Spring Data dependency (and a specific data provider, H2), Spring Boot will automatically configure your application to communicate with H2.
+
+**Spring Data’s CrudRepository**
+For our Repository selection, we’ll use a specific type of Repository: Spring Data’s CrudRepository. At first glance, it’s slightly magical, but let’s unpack that magic.
+
+The following is a complete implementation of all CRUD operations by extending CrudRepository:
+```java
+interface CashCardRepository extends CrudRepository<CashCard, Long> {
+}
+```
+
+With just the above code, a caller can call any number of predefined CrudRepository methods, such as findById:
+```java
+cashCard = cashCardRepository.findById(99);
+```
+You might immediately wonder: Where is the implementation of the CashCardRepository.findById() method? CrudRepository and everything it inherits from is an Interface with no actual code! Well, based on the specific Spring Data framework used (which for us will be Spring Data JDBC) Spring Data takes care of this implementation for us during the IoC container startup time. The Spring runtime will then expose the repository as yet another bean that you can reference wherever needed in your application.
+
+As we’ve learned, there are typically trade-offs. For example the CrudRepository generates SQL statements to read and write your data, which is useful for many cases, but sometimes you need to write your own custom SQL statements for specific use cases.
+
+Look into the following files:
+ - `src/main/resources/schema.sql`
+ - `src/test/resources/data.sql`
+
+**Add Spring Data Dependencies**
+
+This project was originally created using the Spring Initializr, which allowed us to automatically add dependencies to our project. However, now we must manually add dependencies to our project.
+
+Add dependencies for Spring Data and a database.
+
+In `build.gradle`:
+```groovy
+dependencies {
+implementation 'org.springframework.boot:spring-boot-starter-web'
+testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+// Add the two dependencies below
+implementation 'org.springframework.data:spring-data-jdbc:3.3.2'
+implementation 'com.h2database:h2'
+}
+```
+**Understand the dependencies**
+
+The two dependencies we added are related, but different.
+
+```groovy
+implementation 'org.springframework.data:spring-data-jdbc:3.3.2'
+```
+Spring Data has many implementations for a variety of relational and non-relational database technologies. Spring Data also has several abstractions on top of those technologies. These are commonly called an Object-Relational Mapping framework, or ORM.
+
+Here we'll elect to use Spring Data JDBC. From the Spring Data JDBC documentation:
+
+> Spring Data JDBC aims at being conceptually easy...This makes Spring Data JDBC a simple, limited, opinionated ORM.
+
+```groovy
+implementation 'com.h2database:h2'
+```
+Database management frameworks only work if they have a linked database. H2 is a "very fast, open source, JDBC API" SQL database implemented in Java. It works seamlessly with Spring Data JDBC.
+
+At this point, the contents of `build.gradle` are as follows:
+```groovy
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.3.1'
+	id 'io.spring.dependency-management' version '1.1.5'
+}
+
+group = 'example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(22)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// Spring Data Dependencies
+	implementation 'org.springframework.data:spring-data-jdbc:3.3.2'
+	implementation 'com.h2database:h2'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+// This section is optional. It helps show more information on debug
+test {
+	testLogging {
+		events "passed", "skipped", "failed" //, "standardOut", "standardError"
+
+		showExceptions true
+		exceptionFormat "full"
+		showCauses true
+		showStackTraces true
+
+		// Change from false to true
+		showStandardStreams = false
+	}
+}
+```
+
+**Create the CashCardRepository**
+
+Create `src/main/java/example/cashcard/CashCardRepository.java` **interface** and have it extend CrudRepository.
+```java
+package example.cashcard;
+
+// This import uses org.springframework.data:spring-data-jdbc:3.3.2
+import org.springframework.data.repository.CrudRepository;
+
+/**
+ * We do not need to provide implementation of CashCardRepository, Spring will take care of it
+ * This is how Spring handles auto-implementation at boot time.
+ * <p>
+ * CrudRepository needs to be told the model name and primary key type, which helps it in
+ * fetching the required data using that model and primary key.
+ * <p>
+ * Here we used a Record CashCard and in it, primary key is id which has a type of Long.
+ */
+interface CashCardRepository extends CrudRepository<CashCard, Long> {
+}
+```
+**Understand extends CrudRepository**
+
+This is where we tap into the magic of Spring Data and its data repository pattern.
+
+CrudRepository is an interface supplied by Spring Data. When we extend it (or other sub-Interfaces of Spring Data's Repository), Spring Boot and Spring Data work together to automatically generate the CRUD methods that we need to interact with a database.
+
+We'll use one of these CRUD methods, `findById`, later in this project.
+
+> **Note:** When we configure the repository as `CrudRepository<CashCard, Long>` we indicate that the CashCard's ID is Long. However, we still need to tell Spring Data which field is the ID.
+
+Edit the `CashCard.java` class to configure the **id** as the `@Id` for the CashCardRepository.
+```java
+package example.cashcard;
+
+// Add this import
+import org.springframework.data.annotation.Id;
+
+/**
+ * id field is marked with @Id annotation
+ * This let Spring know that id is primary key, to be used by CrudRepository.
+ */
+record CashCard(@Id Long id, Double amount) {
+}
+```
+
+**Inject the CashCardRepository**
+
+Although we've configured our `CashCard` and `CashCardRepository` classes, we haven't utilized the new `CashCardRepository` to manage our `CashCard` data. Let's do that now.
+
+Inject the CashCardRepository into `CashCardController.java` and use it.
+Final contents of `CashCardController.java` are as follows:
+```java
+package example.cashcard;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+// Add this import
+import java.util.Optional;
+
+/**
+ * @RestController
+ * This tells Spring that this class is a Component of type RestController and capable of handling HTTP requests.
+ * <p>
+ * @RequestMapping("/cashcards")
+ * This is a companion to @RestController that indicates which address requests must have to access this Controller.
+ */
+@RestController
+@RequestMapping("/cashcards")
+public class CashCardController {
+
+    /**
+     * Declare private object for CashCardRepository
+     */
+    private final CashCardRepository cashCardRepository;
+
+    /**
+     * Let the autoconfiguration and constructor injection handle initialization.
+     * The constructor is private not public. Spring can handle its auto-initialization.
+     */
+    private CashCardController(CashCardRepository cashCardRepository) {
+        this.cashCardRepository = cashCardRepository;
+    }
+
+    /**
+     * If @RequestMapping is not used, @GetMapping must mention whole path like /cashcards/{requestedId}
+     * @GetMapping marks a method as a handler method.
+     * GET requests that match /cashcards/{requestedID} will be handled by this method.
+     * <p>
+     * @PathVariable makes Spring Web aware of the requestedId supplied in the HTTP request.
+     * Now it’s available for us to use in our handler method.
+     */
+    @GetMapping("/{requestedId}")
+    private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
+        /**
+         * Optional allows to fetch conditional data, which may or may not be there in database.
+         * And this can be used further to get the data or just build an empty response.
+         */
+        Optional<CashCard> optionalCashCard = cashCardRepository.findById(requestedId);
+
+        /**
+         * If data based on requestedId exists, get the data otherwise build empty response.
+         */
+        if (optionalCashCard.isPresent()) {
+            return ResponseEntity.ok(optionalCashCard.get());
+        }
+        else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+```
+**Behold Auto Configuration and Construction Injection!**
+
+Spring's Auto Configuration is utilizing its dependency injection (DI) framework, specifically constructor injection, to supply CashCardController with the correct implementation of CashCardRepository at runtime.
+
+Magical stuff!
+
+> **Learning Moment**: We have just beheld the glory of DI autoconfiguration and constructor injection.
+
+**Understand the changes**
+
+We've just altered the `CashCardController.findById` in several important ways.
+
+```java 
+Optional<CashCard> cashCardOptional = cashCardRepository.findById(requestedId);
+```
+We're calling `CrudRepository.findById`, which returns an `Optional`. This smart object might or might not contain the CashCard for which we're searching.
+
+`cashCardOptional.isPresent()` and `cashCardOptional.get()` determine if findById did or did not find the CashCard with the supplied id.
+
+If `cashCardOptional.isPresent()` is `true`, then the repository successfully found the CashCard and we can retrieve it with `cashCardOptional.get()`. If not, the repository has not found the `CashCard`.
+
+**Run the tests.**
+
+We can see that the tests fail with a `500 INTERNAL_SERVER_ERROR`.
+```shell
+CashCardApplicationTests > shouldReturnACashCardWhenDataIsSaved() FAILED
+org.opentest4j.AssertionFailedError:
+expected: 200 OK
+but was: 500 INTERNAL_SERVER_ERROR
+```
+This means the Cash Card API **"crashed"**.
+
+We need a bit more information...
+
+Let's temporarily update the test output section of build.gradle with `showStandardStreams = true`, so that our test runs will produce a lot more output.
+```groovy
+test {
+    testLogging {
+        events "passed", "skipped", "failed" //, "standardOut", "standardError"
+
+       showExceptions true
+       exceptionFormat "full"
+       showCauses true
+       showStackTraces true
+  
+       // Change from false to true
+       showStandardStreams = true       // <-- here
+    }
+}
+```
+
+**Rerun the tests.**
+
+Note that the test output is much more verbose.
+
+Searching through the output we find these failures:
+```shell
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "CASH_CARD" not found (this database is empty); SQL statement:
+SELECT "CASH_CARD"."ID" AS "ID", "CASH_CARD"."AMOUNT" AS "AMOUNT" FROM "CASH_CARD" WHERE "CASH_CARD"."ID" = ? [42104-214]
+The cause of our test failures is clear: Table "CASH_CARD" not found means we don't have a database nor any data.
+```
+
+**Configure the Database**
+
+Our tests expect the API to find and return a `CashCard` with id of `99`. However, we just removed the hard-coded `CashCard` data and replaced it with a call to `cashCardRepository.findById`.
+
+Now our application is crashing, complaining about a missing database table named `CASH_CARD`:
+
+```shell
+org.h2.jdbc.JdbcSQLSyntaxErrorException: Table "CASH_CARD" not found (this database is empty);
+```
+
+We need to help Spring Data configure the database and load some sample data, such as our friend, CashCard 99.
+
+Spring Data and H2 can automatically create and populate the in-memory database we need for our test. We've provided these files for you, but you'll need to amend them: `schema.sql` and `data.sql`.
+
+> **Note**: Providing `schema.sql` and `data.sql` is one of many ways Spring provides to easily initialize a database.
+
+As mentioned above, Spring Data will automatically configure a database for tests if we provide the correct file in the correct location.
+
+Create `src/main/resources/schema.sql` file with following contents:
+```sql
+CREATE TABLE cash_card
+(
+ID     BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+AMOUNT NUMBER NOT NULL DEFAULT 0
+);
+```
+
+Understand `schema.sql`.
+
+> A database schema is a "blueprint" for how data is stored in a database.
+
+Our database schema reflects the `CashCard` object that we understand, which contains an `id` and an `amount`.
+
+**Rerun the tests.**
+
+> **Note:** If the test output is too verbose, revert the change in `build.gradle` performed previously.
+
+Our tests no longer crash with a `500 INTERNAL_SERVER_ERROR`. However, now we get a `404 NOT_FOUND`.
+```shell
+CashCardApplicationTests > shouldReturnACashCardWhenDataIsSaved() FAILED
+org.opentest4j.AssertionFailedError:
+expected: 200 OK
+but was: 404 NOT_FOUND
+```
+
+> **Translation:** Our repository can't find CashCard with id of 99. So, why not?
+
+Although we've helped Spring Data create a test database by un-commenting `schema.sql`, it's still an **empty database**.
+
+Let's go load some test data from `data.sql`.
+
+Not only can Spring Data create our test database, it can also load data into it, which we can use in our tests.
+
+Similar to `schema.sql`, create `src/test/resources/data.sql`, with following contents:
+```sql
+INSERT INTO CASH_CARD(ID, AMOUNT) VALUES (99, 123.45);
+```
+
+This SQL statement inserts a row into the `CASH_CARD` table with an `ID=99` and `AMOUNT=123.45`, which matches the values we expect in our tests.
+
+**Rerun the tests.**
+```shell
+[~/cashcard] $ ./gradlew test
+...
+BUILD SUCCESSFUL in 7s
+```
+
+Success! We're now using real data in our API.
+
+> **Learning Moment:** `main` vs `test` resources <br>
+Notice that `src/main/resources/schema.sql` and `src/test/resources/data.sql` are in different resources locations.
+
+Remember that our Cash Card with `ID 99` and `Amount 123.45` is a **fake**, made-up Cash Card that we only want to use in our tests. 
+We don't want our "real" or production system to load Cash Card 99 into the system.
+
+Spring has provided a powerful feature for us: it allows us to separate our **test-only resources** from our **main resources** when needed.
+Our scenario here is a common example of this: **our database schema is always the same, but our data is not!**
