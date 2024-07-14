@@ -220,11 +220,13 @@ As we progress through this course, you’ll learn how to implement all of the r
 Now that we’ve discussed REST in general, let’s look at the parts of Spring Boot that we’ll use to implement REST. Let’s start by discussing Spring’s IoC container.
 
 **Spring Annotations and Component Scan**
+
 One of the main things Spring does is to configure and instantiate objects. These objects are called Spring Beans, and are usually created by Spring (as opposed to using the Java new keyword). You can direct Spring to create Beans in several ways.
 
 In this lesson, you’ll annotate a class with a Spring Annotation, which directs Spring to create an instance of the class during Spring’s Component Scan phase. This happens at application startup. The Bean is stored in Spring’s IoC container. From here, the bean can be injected into any code that requests it.
 
 **Spring Web Controllers**
+
 In Spring Web, Requests are handled by Controllers. In this lesson, you’ll use the more specific RestController:
 ```java
 @RestController
@@ -392,6 +394,7 @@ At this point in our development journey, we’ve got a system which returns a h
 Spring Data works with Spring Boot to make database integration simple. Before we jump in, let’s briefly talk about Spring Data’s architecture.
 
 **Controller-Repository Architecture**
+
 The Separation of Concerns principle states that well-designed software should be modular, with each module having distinct and separate concerns from any other module.
 
 Up until now, our codebase only returns a hard-coded response from the Controller. This setup violates the Separation of Concerns principle by mixing the concerns of a Controller, which is an abstraction of a web interface, with the concerns of reading and writing data to a data store, such as a database. In order to solve this, we’ll use a common software architecture pattern to enforce data management separation via the Repository pattern.
@@ -405,6 +408,7 @@ The Repository is the interface between the application and the database, and pr
 In good news, Spring Data provides a collection of robust data management tools, including implementations of the Repository pattern.
 
 **Choosing a Database**
+
 For our database selection, we’ll use an embedded, in-memory database. “Embedded” simply means that it’s a Java library, so it can be added to the project just like any other dependency. “In-memory” means that it stores data in memory only, as opposed to persisting data in permanent, durable storage. At the same time, our in-memory database is largely compatible with production-grade relational database management systems (RDBMS) like MySQL, SQL Server, and many others. Specifically, it uses JDBC (the standard Java library for database connectivity) and SQL (the standard database query language).
 
 <img width="556" alt="image" src="https://github.com/user-attachments/assets/64fdad64-1f83-4f89-b050-8e0468738946">
@@ -414,9 +418,11 @@ There are tradeoffs to using an in-memory database instead of a persistent datab
 The specific in-memory database we’ll use is H2. Fortunately, H2 is highly compatible with other relational databases, so dev-prod parity won’t be a big issue. We’ll use H2 for convenience for local development, but we want to recognize the tradeoffs.
 
 **Auto Configuration**
+
 In the lab, all we need for full database functionality is to add two dependencies. This wonderfully showcases one of the most powerful features of Spring Boot: Auto Configuration. Without Spring Boot, we’d have to configure Spring Data to speak to H2. However, because we’ve included the Spring Data dependency (and a specific data provider, H2), Spring Boot will automatically configure your application to communicate with H2.
 
 **Spring Data’s CrudRepository**
+
 For our Repository selection, we’ll use a specific type of Repository: Spring Data’s CrudRepository. At first glance, it’s slightly magical, but let’s unpack that magic.
 
 The following is a complete implementation of all CRUD operations by extending CrudRepository:
