@@ -785,4 +785,6 @@ We don't want our "real" or production system to load Cash Card 99 into the syst
 Spring has provided a powerful feature for us: it allows us to separate our **test-only resources** from our **main resources** when needed.
 Our scenario here is a common example of this: **our database schema is always the same, but our data is not!**
 
+Finally, the directory and file structure looks like this:
+
 <img width="1131" alt="image" src="https://github.com/user-attachments/assets/1997973d-dd4e-409c-9de9-964addad867f">
