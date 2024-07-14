@@ -32,11 +32,12 @@ Response:
 
 ### The Red, Green, Refactor Loop
 Software development teams love to move fast. So how do you go fast forever? By continuously improving and simplifying your code–refactoring. One of the only ways you can safely refactor is when you have a trustworthy test suite. Thus, the best time to refactor the code you're currently focusing on is during the TDD cycle. This is called the Red, Green, Refactor development loop:
-- Red: Write a failing test for the desired functionality.
-- Green: Implement the simplest thing that can work to make the test pass.
-- Refactor: Look for opportunities to simplify, reduce duplication, or otherwise improve the code without changing any behavior—to refactor.
-- Repeat!
-  Throughout the labs in this course, you'll practice the Red, Green, Refactor loop to develop the Family Cash Card REST API.
+- **Red**: Write a failing test for the desired functionality.
+- **Green**: Implement the simplest thing that can work to make the test pass.
+- **Refactor**: Look for opportunities to simplify, reduce duplication, or otherwise improve the code without changing any behavior—to refactor.
+- **Repeat**!
+
+Throughout the labs in this course, you'll practice the Red, Green, Refactor loop to develop the Family Cash Card REST API.
 
 Create a Test file first, write some tests, let them fail. Then turn them right before we move on to code. Create a Json Test file at `src/test/java/example/cashcard/CashCardJsonTest.java`
 You need to explicitly import statically org.assertj library’s assertThat method. Also some annotations are needed like @JsonTest above the class name.
