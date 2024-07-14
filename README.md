@@ -12,7 +12,7 @@ Add Spring Web as dependency
 
 Download and extract the code, and use `./gradlew build` to finish building the generated code.
 We will be implementing the following **API contract** for now.
-```http request
+```yaml
   URI: /cashcards/{id}
   HTTP Verb: GET
   Body: None
