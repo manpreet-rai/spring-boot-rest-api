@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/d4d81c03-459e-4b28-91a2-b78c2b36dbb1)
+<img width="555" alt="image" src="https://github.com/user-attachments/assets/921ceeea-04eb-41fa-b758-21750ae8c3ee">
 
 # REST API with Spring Boot
 
@@ -208,10 +208,10 @@ The response to a successful Read request has a body containing the JSON represe
 Response:
   Status Code: 200
   Body:
-        {
-          "id": 123,
-          "amount": 25.00
-        }
+          {
+            "id": 123,
+            "amount": 25.00
+          }
 ```
 As we progress through this course, you’ll learn how to implement all of the remaining CRUD operations as well.
 
@@ -445,12 +445,12 @@ Add dependencies for Spring Data and a database.
 In `build.gradle`:
 ```groovy
 dependencies {
-implementation 'org.springframework.boot:spring-boot-starter-web'
-testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
 // Add the two dependencies below
-implementation 'org.springframework.data:spring-data-jdbc:3.3.2'
-implementation 'com.h2database:h2'
+  implementation 'org.springframework.data:spring-data-jdbc:3.3.2'
+  implementation 'com.h2database:h2'
 }
 ```
 **Understand the dependencies**
@@ -474,51 +474,51 @@ Database management frameworks only work if they have a linked database. H2 is a
 At this point, the contents of `build.gradle` are as follows:
 ```groovy
 plugins {
-	id 'java'
-	id 'org.springframework.boot' version '3.3.1'
-	id 'io.spring.dependency-management' version '1.1.5'
+  id 'java'
+  id 'org.springframework.boot' version '3.3.1'
+  id 'io.spring.dependency-management' version '1.1.5'
 }
 
 group = 'example'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(22)
-	}
+  toolchain {
+    languageVersion = JavaLanguageVersion.of(22)
+  }
 }
 
 repositories {
-	mavenCentral()
+  mavenCentral()
 }
 
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+  testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-	// Spring Data Dependencies
-	implementation 'org.springframework.data:spring-data-jdbc:3.3.2'
-	implementation 'com.h2database:h2'
+  // Spring Data Dependencies
+  implementation 'org.springframework.data:spring-data-jdbc:3.3.2'
+  implementation 'com.h2database:h2'
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+  useJUnitPlatform()
 }
 
 // This section is optional. It helps show more information on debug
 test {
-	testLogging {
-		events "passed", "skipped", "failed" //, "standardOut", "standardError"
+  testLogging {
+    events "passed", "skipped", "failed" //, "standardOut", "standardError"
 
-		showExceptions true
-		exceptionFormat "full"
-		showCauses true
-		showStackTraces true
+    showExceptions true
+    exceptionFormat "full"
+    showCauses true
+    showStackTraces true
 
-		// Change from false to true
-		showStandardStreams = false
-	}
+    // Change from false to true
+    showStandardStreams = false
+  }
 }
 ```
 
@@ -597,45 +597,45 @@ import java.util.Optional;
 @RequestMapping("/cashcards")
 public class CashCardController {
 
+  /**
+   * Declare private object for CashCardRepository
+   */
+  private final CashCardRepository cashCardRepository;
+
+  /**
+   * Let the autoconfiguration and constructor injection handle initialization.
+   * The constructor is private not public. Spring can handle its auto-initialization.
+   */
+  private CashCardController(CashCardRepository cashCardRepository) {
+    this.cashCardRepository = cashCardRepository;
+  }
+
+  /**
+   * If @RequestMapping is not used, @GetMapping must mention whole path like /cashcards/{requestedId}
+   * @GetMapping marks a method as a handler method.
+   * GET requests that match /cashcards/{requestedID} will be handled by this method.
+   * <p>
+   * @PathVariable makes Spring Web aware of the requestedId supplied in the HTTP request.
+   * Now it’s available for us to use in our handler method.
+   */
+  @GetMapping("/{requestedId}")
+  private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
     /**
-     * Declare private object for CashCardRepository
+     * Optional allows to fetch conditional data, which may or may not be there in database.
+     * And this can be used further to get the data or just build an empty response.
      */
-    private final CashCardRepository cashCardRepository;
+    Optional<CashCard> optionalCashCard = cashCardRepository.findById(requestedId);
 
     /**
-     * Let the autoconfiguration and constructor injection handle initialization.
-     * The constructor is private not public. Spring can handle its auto-initialization.
+     * If data based on requestedId exists, get the data otherwise build empty response.
      */
-    private CashCardController(CashCardRepository cashCardRepository) {
-        this.cashCardRepository = cashCardRepository;
+    if (optionalCashCard.isPresent()) {
+      return ResponseEntity.ok(optionalCashCard.get());
     }
-
-    /**
-     * If @RequestMapping is not used, @GetMapping must mention whole path like /cashcards/{requestedId}
-     * @GetMapping marks a method as a handler method.
-     * GET requests that match /cashcards/{requestedID} will be handled by this method.
-     * <p>
-     * @PathVariable makes Spring Web aware of the requestedId supplied in the HTTP request.
-     * Now it’s available for us to use in our handler method.
-     */
-    @GetMapping("/{requestedId}")
-    private ResponseEntity<CashCard> findById(@PathVariable Long requestedId) {
-        /**
-         * Optional allows to fetch conditional data, which may or may not be there in database.
-         * And this can be used further to get the data or just build an empty response.
-         */
-        Optional<CashCard> optionalCashCard = cashCardRepository.findById(requestedId);
-
-        /**
-         * If data based on requestedId exists, get the data otherwise build empty response.
-         */
-        if (optionalCashCard.isPresent()) {
-            return ResponseEntity.ok(optionalCashCard.get());
-        }
-        else {
-            return ResponseEntity.notFound().build();
-        }
+    else {
+      return ResponseEntity.notFound().build();
     }
+  }
 }
 ```
 **Behold Auto Configuration and Construction Injection!**
@@ -675,17 +675,17 @@ We need a bit more information...
 Let's temporarily update the test output section of build.gradle with `showStandardStreams = true`, so that our test runs will produce a lot more output.
 ```groovy
 test {
-    testLogging {
-        events "passed", "skipped", "failed" //, "standardOut", "standardError"
+  testLogging {
+    events "passed", "skipped", "failed" //, "standardOut", "standardError"
 
-       showExceptions true
-       exceptionFormat "full"
-       showCauses true
-       showStackTraces true
-  
-       // Change from false to true
-       showStandardStreams = true       // <-- here
-    }
+    showExceptions true
+    exceptionFormat "full"
+    showCauses true
+    showStackTraces true
+
+    // Change from false to true
+    showStandardStreams = true       // <-- here
+  }
 }
 ```
 
@@ -722,8 +722,8 @@ Create `src/main/resources/schema.sql` file with following contents:
 ```sql
 CREATE TABLE cash_card
 (
-ID     BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
-AMOUNT NUMBER NOT NULL DEFAULT 0
+  ID     BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  AMOUNT NUMBER NOT NULL DEFAULT 0
 );
 ```
 
