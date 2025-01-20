@@ -788,3 +788,826 @@ Our scenario here is a common example of this: **our database schema is always t
 Finally, the directory and file structure looks like this:
 
 <img width="1131" alt="image" src="https://github.com/user-attachments/assets/1997973d-dd4e-409c-9de9-964addad867f">
+
+### Implementing POST
+Our REST API can now fetch Cash Cards with a specific ID. In this lesson, you’ll add the Create endpoint to the API.
+
+Four questions we’ll need to answer while doing this are:
+
+Who specifies the ID - the client, or the server?
+In the API Request, how do we represent the object to be created?
+Which HTTP method should we use in the Request?
+What does the API send as a Response?
+Let’s start by answering the first question: “Who specifies the ID?” In reality, this is up to the API creator! REST is not exactly a standard; it’s merely a way to use HTTP to perform data operations. REST contains a number of guidelines, many of which we’re following in this course.
+
+Here we’ll choose to let the server create the ID. Why? Because it’s the simplest solution, and databases are efficient at managing unique IDs. However, for completeness, let’s discuss our alternatives:
+
+We could require the client to provide the ID. This might make sense if there were a pre-existing unique ID, but that’s not the case.
+We could allow the client to provide the ID optionally (and create it on the server if the client does not supply it). However, we don’t have a requirement to do this, and it would complicate our application. If you think you might want to do this “just in case”, the Yagni article (link in the References section) might dissuade you.
+Before answering the third question, “Which HTTP method should be used in the Request?”, let’s talk about the relevant concept of idempotence.
+
+**Idempotence and HTTP**
+An idempotent operation is defined as one which, if performed more than once, results in the same outcome. In a REST API, an idempotent operation is one that even if it were to be performed several times, the resulting data on the server would be the same as if it had been performed only once.
+
+For each method, the HTTP standard specifies whether it is idempotent or not. GET, PUT, and DELETE are idempotent, whereas POST and PATCH are not.
+
+Since we’ve decided that the server will create IDs for every Create operation, the Create operation in our API is NOT idempotent. Since the server will create a new ID (on every Create request), if you call Create twice - even with the same content - you’ll end up with two different objects with the same content, but with different IDs. That was a mouthful, so to summarize: Every Create request will generate a new ID, thus no idempotency.
+
+![image](https://github.com/user-attachments/assets/3407e638-0d2b-469e-9ca6-fdd1f98c1be3)
+
+This leaves us with the POST and PATCH options. As it turns out, REST permits POST as one of the proper methods to use for Create operations, so we'll use it. We’ll revisit PATCH in a later lesson.
+
+**The POST Request and Response**
+
+Now let’s talk about the content of the POST Request, and the Response.
+
+`The Request`
+The POST method allows a Body, so we'll use the Body to send a JSON representation of the object:
+
+```
+Request:
+
+Method: POST
+URI: /cashcards/
+Body:
+{
+    amount: 123.45
+}
+```
+
+In contrast, if you recall from a previous lesson, the GET operation includes the ID of the Cash Card in the URI, but not in the request Body.
+
+So why is there no ID in the Request? Because we decided to allow the server to create the ID. Thus, the data contract for the Read operation is different from that of the Create operation.
+
+`The Response`
+Let's move on to the Response. On successful creation, what HTTP Response Status Code should be sent? We could use 200 OK (the response that Read returns), but there’s a more specific, more accurate code for REST APIs: 201 CREATED.
+
+The fact that CREATED is the name of the code makes it seem intuitively appropriate, but there’s another, more technical reason to use it: A response code of 200 OK does not answer the question “Was there any change to the server data?”. By returning the 201 CREATED status, the API is specifically communicating that data was added to the data store on the server.
+
+In a previous lesson you learned that an HTTP Response contains two things: a Status Code, and a Body. But that’s not all! A Response also contains Headers. Headers have a name and a value. The HTTP standard specifies that the Location header in a 201 CREATED response should contain the URI of the created resource. This is handy because it allows the caller to easily fetch the new resource using the GET endpoint (the one we implemented prior).
+
+Here is the complete Response:
+
+```
+Response:
+
+Status Code: 201 CREATED
+Header: Location=/cashcards/42
+```
+
+**Spring Web Convenience Methods**
+
+In the accompanying lab, you’ll see that Spring Web provides methods which are geared towards the recommended use of HTTP and REST.
+
+For example, we’ll use the ResponseEntity.created(uriOfCashCard) method to create the above response. This method requires you to specify the location, ensures the Location URI is well-formed (by using the URI class), adds the Location header, and sets the Status Code for you. And by doing so, this saves us from using more verbose methods. For example, the following two code snippets are equivalent (as long as uriOfCashCard is not null):
+
+```java
+return  ResponseEntity
+        .created(uriOfCashCard)
+        .build();
+```
+
+Versus:
+```java
+return ResponseEntity
+        .status(HttpStatus.CREATED)
+        .header(HttpHeaders.LOCATION, uriOfCashCard.toASCIIString())
+        .build();
+```
+
+Aren’t you glad Spring Web provides the .created() convenience method?
+
+Let's get started with HTTP POST in Spring.
+
+**Test the HTTP POST Endpoint**
+
+Add a test for the POST endpoint.
+
+The simplest example of success is a non-failing HTTP POST request to our Family Cash Card API. We'll test for a 200 OK response instead of a 201 CREATED for now. Don't worry, we'll change this soon.
+
+Edit `src/test/java/example/cashcard/CashCardApplicationTests.java` and add the following test method.
+```java
+@Test
+void shouldCreateANewCashCard() {
+   CashCard newCashCard = new CashCard(null, 250.00);
+   ResponseEntity<Void> createResponse = restTemplate.postForEntity("/cashcards", newCashCard, Void.class);
+   assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+}
+```
+
+**Understand the test.**
+
+```java
+CashCard newCashCard = new CashCard(null, 250.00);
+```
+
+The database will create and manage all unique `CashCard.id` values for us. We shouldn't provide one.
+```java
+restTemplate.postForEntity("/cashcards", newCashCard, Void.class);
+```
+This is very similar to `restTemplate.getForEntity`, but we must also provide newCashCard data for the new CashCard.
+
+In addition, and unlike `restTemplate.getForEntity`, we don't expect a `CashCard` to be returned to us, so we expect a `Void` response body.
+
+Run the tests.
+
+We'll always use `./gradlew test` to run our tests.
+
+`[~/exercises] $ ./gradlew test`
+
+What do you expect will happen?
+
+```
+CashCardApplicationTests > shouldCreateANewCashCard() FAILED
+   org.opentest4j.AssertionFailedError:
+   expected: 200 OK
+   but was: 404 NOT_FOUND
+```
+
+We shouldn't be surprised by the `404 NOT_FOUND error`. We haven't added the POST endpoint yet!
+
+**Add the POST endpoint**
+
+The POST endpoint is similar to the GET endpoint in our CashCardController, but uses the `@PostMapping` annotation from Spring Web.
+
+The POST endpoint must accept the data we are submitting for our new CashCard, specifically the amount.
+
+But what happens if we don't accept the CashCard?
+
+Add the POST endpoint without accepting CashCard data.
+
+Edit `src/main/java/example/cashcard/CashCardController.java` and add the following method.
+
+Don't forget to add the import for PostMapping.
+
+```java
+import org.springframework.web.bind.annotation.PostMapping;
+...
+
+@PostMapping
+private ResponseEntity<Void> createCashCard() {
+   return null;
+}
+```
+
+Note that by returning nothing at all, Spring Web will automatically generate an HTTP Response Status code of 200 OK. But, this isn't very satisfying -- our POST endpoint does nothing!
+
+So let's make our tests better.
+
+**Testing based on semantic correctness**
+
+We want our Cash Card API to behave as semantically correctly as possible. Meaning, users of our API shouldn't be surprised by how it behaves.
+
+Let's refer to the official Request for Comments for HTTP Semantics and Content (RFC 9110) for guidance as to how our API should behave.
+
+For our POST endpoint, review this section about HTTP POST; note that we've added emphasis:
+
+If one or more resources has been created on the origin server as a result of successfully processing a POST request, the origin server SHOULD send a 201 (Created) response containing a Location header field that provides an identifier for the primary resource created ...
+
+We'll explain more about this specification as we write our test.
+
+Let's start by updating the POST test.
+
+Update the shouldCreateANewCashCard test.
+
+Here's how we'll encode the HTTP specification as expectations in our test. Be sure to add the additional import.
+
+```java
+import java.net.URI;
+...
+
+@Test
+void shouldCreateANewCashCard() {
+   CashCard newCashCard = new CashCard(null, 250.00);
+   ResponseEntity<Void> createResponse = restTemplate.postForEntity("/cashcards", newCashCard, Void.class);
+   assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+   URI locationOfNewCashCard = createResponse.getHeaders().getLocation();
+   ResponseEntity<String> getResponse = restTemplate.getForEntity(locationOfNewCashCard, String.class);
+   assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+}
+```
+
+**Run the tests.**
+
+Unsurprisingly, they fail on the first changed assertion.
+```
+expected: 201 CREATED
+  but was: 200 OK
+```
+Let's start fixing stuff!
+
+Update the `createCashCard` method to the following definition
+```java
+@PostMapping
+private ResponseEntity<Void> createCashCard(@RequestBody CashCard newCashCardRequest, UriComponentsBuilder ucb) {
+   CashCard savedCashCard = cashCardRepository.save(newCashCardRequest);
+   URI locationOfNewCashCard = ucb
+            .path("cashcards/{id}")
+            .buildAndExpand(savedCashCard.id())
+            .toUri();
+   return ResponseEntity.created(locationOfNewCashCard).build();
+}
+```
+
+**Understand CrudRepository.save**
+
+This line in `CashCardController.createCashCard` is deceptively simple:
+
+```java
+CashCard savedCashCard = cashCardRepository.save(newCashCardRequest);
+```
+As learned in previous lessons and labs, Spring Data's CrudRepository provides methods that support creating, reading, updating, and deleting data from a data store. cashCardRepository.save(newCashCardRequest) does just as it says: it saves a new CashCard for us, and returns the saved object with a unique id provided by the database. Amazing!
+
+**Understand the other changes to CashCardController**
+
+Our CashCardController now implements the expected input and results of an HTTP POST.
+
+`createCashCard(@RequestBody CashCard newCashCardRequest, ...)`
+Unlike the GET we added earlier, the POST expects a request "body". This contains the data submitted to the API. Spring Web will deserialize the data into a CashCard for us.
+
+```java
+URI locationOfNewCashCard = ucb
+   .path("cashcards/{id}")
+   .buildAndExpand(savedCashCard.id())
+   .toUri();
+```
+This is constructing a URI to the newly created CashCard. This is the URI that the caller can then use to GET the newly-created CashCard.
+
+Note that savedCashCard.id is used as the identifier, which matches the GET endpoint's specification of cashcards/<CashCard.id>.
+
+Where did UriComponentsBuilder come from?
+
+We were able to add UriComponentsBuilder ucb as a method argument to this POST handler method and it was automatically passed in. How so? It was injected from our now-familiar friend, Spring's IoC Container. Thanks, Spring Web!
+
+`return ResponseEntity.created(locationOfNewCashCard).build();`
+Finally, we return 201 CREATED with the correct Location header.
+
+**Add more test assertions.**
+
+If you'd like, add more test assertions for the new id and amount to solidify your learning.
+
+```java
+...
+assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+// Add assertions such as these
+DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
+Number id = documentContext.read("$.id");
+Double amount = documentContext.read("$.amount");
+
+assertThat(id).isNotNull();
+assertThat(amount).isEqualTo(250.00);
+```
+
+The additions verify that the new CashCard.id is not null, and the newly created CashCard.amount is 250.00, just as we specified at creation time.
+
+### Returning a list with GET
+Now that our API can create Cash Cards, it’s reasonable to learn how to fetch all (or some!) of the Cash Cards. In this lesson, we’ll implement the “Read Many” endpoint, and understand how this operation differs substantially from the Read endpoint that we previously created.
+
+**Requesting a List of Cash Cards**
+
+We can expect each of our Family Cash Card users to have a few cards: imagine one for each of their family members, and perhaps a few that they gave as gifts. The API should be able to return multiple Cash Cards in response to a single REST request.
+
+When you make an API request for several Cash Cards, you’d ideally make a single request, which returns a list of Cash Cards. So, we’ll need a new data contract. Instead of a single Cash Card, the new contract should specify that the response is a JSON Array of Cash Card objects:
+
+```json
+[
+  {
+    "id": 1,
+    "amount": 123.45
+  },
+  {
+    "id": 2,
+    "amount": 50.0
+  }
+]
+```
+It turns out that our old friend, CrudRepository, has a findAll method that we can use to easily fetch all the Cash Cards in the database. Let's go ahead and use that method. At first glance, it looks quite simple:
+
+```java
+@GetMapping()
+private ResponseEntity<Iterable<CashCard>> findAll() {
+   return ResponseEntity.ok(cashCardRepository.findAll());
+}
+```
+However, it turns out there’s a lot more to this operation than just returning all the Cash Cards in the database. Some questions come to mind:
+
+How do I return only the Cash Cards that the user owns? (Great question! We’ll discuss this in the upcoming Spring Security lesson).
+What if there are hundreds (or thousands?!) of Cash Cards? Should the API return an unlimited number of results or return them in “chunks”? This is known as Pagination.
+Should the Cash Cards be returned in a particular order (i.e., should they be sorted?)?
+We’ll leave the first question for later, but answer the pagination and sorting questions in this lesson. Let’s press on!
+
+**Pagination and Sorting**
+
+To start our pagination and sorting work, we’ll use a specialized version of the CrudRepository, called the PagingAndSortingRepository. As you might guess, this does exactly what its name suggests. But first, let’s talk about the “Paging” functionality.
+
+Even though we’re unlikely to have users with thousands of Cash Cards, we never know how users might use the product. Ideally, an API should not be able to produce a response with unlimited size, because this could overwhelm the client or server memory, not to mention taking quite a long time!
+
+In order to ensure that an API response doesn’t include an astronomically large number of Cash Cards, let’s utilize Spring Data’s pagination functionality. Pagination in Spring (and many other frameworks) is to specify the page length (e.g. 10 items), and the page index (starting with 0). For example, if a user has 25 Cash Cards, and you elect to request the second page where each page has 10 items, you would request a page of size 10, and page index of 1.
+
+Bingo! Right? But wait, this brings up another hurdle. In order for pagination to produce the correct page content, the items must be sorted in some specific order. Why? Well, let’s say we have a bunch of Cash Cards with the following amounts:
+
+```
+$0.19 (this one’s pretty much all gone, oh well!)
+$1,000.00 (this one is for emergency purchases for a university student)
+$50.00
+$20.00
+$10.00 (someone gifted this one to your niece for her birthday)
+```
+Now let’s go through an example using a page size of 3. Since there are 5 Cash Cards, we’d make two requests in order to return all of them. Page 1 (index 0) contains three items, and page 2 (index 1, the last page) contains 2 items. But which items go where? If you specify that the items should be sorted by amount in descending order, then this is how the data is paginated:
+
+```
+Page 1:
+$1,000.00
+$50.00
+$20.00
+
+Page 2:
+$10.00
+$0.19
+```
+
+**Regarding Unordered Queries**
+
+Although Spring does provide an “unordered” sorting strategy, let’s be explicit when we select which fields for sorting. Why do this? Well, imagine you elect to use “unordered” pagination. In reality, the order is not random, but instead predictable; it never changes on subsequent requests. Let’s say you make a request, and Spring returns the following “unordered” results:
+
+```
+Page 1:
+$0.19
+$1,000.00
+$50.00
+
+Page 2:
+$20.00
+$10.00
+```
+Although they look random, every time you make the request, the cards will come back in exactly this order, so that each item is returned on exactly one page.
+
+Now for the punchline: Imagine you now create a new Cash Card with an amount of $42.00. Which page do you think it will be on? As you might guess, there’s no way to know other than making the request and seeing where the new Cash Card lands.
+
+So how can we make this a bit more useful? Let’s opt for ordering by a specific field. There are a few good reasons to do so, including:
+- Minimize cognitive overhead: Other developers (not to mention users) will probably appreciate a thoughtful ordering when developing it.
+- Minimize future errors: What happens when a new version of Spring, or Java, or the database, suddenly causes the “random” order to change overnight?
+
+**Spring Data Pagination API**
+
+Thankfully, Spring Data provides the PageRequest and Sort classes for pagination. Let’s look at a query to get page 2 with page size 10, sorting by amount in descending order (largest amounts first):
+
+```java
+Page<CashCard> page2 = cashCardRepository.findAll(
+    PageRequest.of(
+        1,  // page index for the second page - indexing starts at 0
+        10, // page size (the last page might have fewer items)
+        Sort.by(new Sort.Order(Sort.Direction.DESC, "amount"))));
+```
+
+**The Request and Response**
+
+Now let’s use Spring Web to extract the data to feed the pagination functionality:
+- Pagination: Spring can parse out the page and size parameters if you pass a Pageable object to a PagingAndSortingRepository find…()method.
+- Sorting: Spring can parse out the sort parameter, consisting of the field name and the direction separated by a comma – but be careful, no space before or after the comma is allowed! Again, this data is part of the Pageable object.
+
+**The URI**
+
+Now let’s learn how we can compose a URI for the new endpoint, step-by-step (we've omitted the https://domain prefix in the following):
+- Get the second page
+```/cashcards?page=1```
+
+- …where a page has length of 3
+```/cashcards?page=1&size=3```
+
+- …sorted by the current Cash Card balance
+```/cashcards?page=1&size=3&sort=amount```
+
+- …in descending order (highest balance first)
+```/cashcards?page=1&size=3&sort=amount,desc```
+
+**The Java Code**
+
+Let’s go over the complete implementation of the Controller method for our new “get a page of Cash Cards” endpoint:
+```java
+@GetMapping
+private ResponseEntity<List<CashCard>> findAll(Pageable pageable) {
+   Page<CashCard> page = cashCardRepository.findAll(
+           PageRequest.of(
+                   pageable.getPageNumber(),
+                   pageable.getPageSize(),
+                   pageable.getSortOr(Sort.by(Sort.Direction.DESC, "amount"))));
+   return ResponseEntity.ok(page.getContent());
+}
+```
+
+Let’s dive into a bit more detail:
+- First let’s parse the needed values out of the query string:
+  - We use Pageable, which allows Spring to parse out the page number and size query string parameters.
+    - Note: If the caller doesn’t provide the parameters, Spring provides defaults: page=0, size=20.
+- We use getSortOr() so that even if the caller doesn’t supply the sort parameter, there is a default. Unlike the page and size parameters, for which it makes sense for Spring to supply a default, it wouldn’t make sense for Spring to arbitrarily pick a sort field and direction.
+- We use the page.getContent() method to return the Cash Cards contained in the Page object to the caller.
+
+So, what does the Page object contain besides the Cash Cards? Here's the Page object in JSON format. The Cash Cards are contained in the content. The rest of the fields contain information about how this Page is related to other Pages in the query.
+
+```json
+{
+  "content": [
+    {
+      "id": 1,
+      "amount": 10.0
+    },
+    {
+      "id": 2,
+      "amount": 0.19
+    }
+  ],
+  "pageable": {
+    "sort": {
+      "empty": false,
+      "sorted": true,
+      "unsorted": false
+    },
+    "offset": 3,
+    "pageNumber": 1,
+    "pageSize": 3,
+    "paged": true,
+    "unpaged": false
+  },
+  "last": true,
+  "totalElements": 5,
+  "totalPages": 2,
+  "first": false,
+  "size": 3,
+  "number": 1,
+  "sort": {
+    "empty": false,
+    "sorted": true,
+    "unsorted": false
+  },
+  "numberOfElements": 2,
+  "empty": false
+}
+```
+
+Although we could return the entire Page object to the client, we don't need all that information. We'll define our data contract to only return the Cash Cards, not the rest of the Page data.
+
+Test for an Additional GET Endpoint
+Write a failing test for a new GET endpoint.
+
+Let's add a new test method which expects a GET endpoint which returns multiple CashCard objects.
+
+In CashCardApplicationTests.java, add a new test:
+
+ @Test
+ void shouldReturnAllCashCardsWhenListIsRequested() {
+     ResponseEntity<String> response = restTemplate.getForEntity("/cashcards", String.class);
+     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+ }
+Here we're making a request to the /cashcards endpoint. Since we're getting the entire list of cards, we don't need to specify any additional information in the request.
+
+Run the tests and observe the failure.
+
+The test should fail because we haven't implemented a Controller endpoint to handle this GET request.
+
+How do you think it will fail? Perhaps a 404 NOT FOUND?
+
+In a previous lesson we wrote a test that failed because no endpoint yet existed to match the route being requested. The result was a 404 NOT FOUND error. We might expect the same thing to happen when we run the new test, since we haven't added any code to the Controller.
+
+Let's see what happens. Run the test and search for the following failure:
+
+expected: 200 OK
+ but was: 405 METHOD_NOT_ALLOWED
+The error messages don't make it clear why we're receiving a 405 METHOD_NOT_ALLOWED error. The reason is a bit hard to discover, so we'll quickly summarize it: We've already implemented a /cashcards endpoint, but not for a GET verb.
+
+This is Spring's process:
+
+Spring receives a request to the /cashcards endpoint.
+There's no mapping for the HTTP GET verb at that endpoint.
+There is, however, a mapping to that endpoint for the HTTP POST verb. It's the endpoint for the Create operation that we implemented in a previous lesson!
+Therefore, Spring reports a 405 METHOD_NOT_ALLOWED error instead of 404 NOT FOUND -- the route was indeed found, but it doesn't support the GET verb.
+Implement the GET endpoint in the Controller.
+
+To get past the 405 error, we need to implement the /cashcards endpoint in the Controller using a @GetMapping annotation:
+
+@GetMapping()
+private ResponseEntity<Iterable<CashCard>> findAll() {
+   return ResponseEntity.ok(cashCardRepository.findAll());
+}
+Understand the handler method.
+
+Once again we're using one of Spring Data's built-in implementations: CrudRepository.findAll(). Our implementing Repository, CashCardRepository, will automatically return all CashCard records from the database when findAll() is invoked.
+
+Rerun the tests.
+
+Enhance the List Test
+As we've done in previous lessons, we've tested that our Cash Card API Controller is "listening" for our HTTP calls and does not crash when invoked, this time for a GET with no further parameters.
+
+Let's enhance our tests and make sure the correct data is returned from our HTTP request.
+
+Enhance the test.
+
+First, let's fill out the test to assert on the expected data values:
+
+ @Test
+ void shouldReturnAllCashCardsWhenListIsRequested() {
+     ResponseEntity<String> response = restTemplate.getForEntity("/cashcards", String.class);
+     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+     DocumentContext documentContext = JsonPath.parse(response.getBody());
+     int cashCardCount = documentContext.read("$.length()");
+     assertThat(cashCardCount).isEqualTo(3);
+
+     JSONArray ids = documentContext.read("$..id");
+     assertThat(ids).containsExactlyInAnyOrder(99, 100, 101);
+
+     JSONArray amounts = documentContext.read("$..amount");
+     assertThat(amounts).containsExactlyInAnyOrder(123.45, 100.0, 150.00);
+ }
+Understand the test.
+
+documentContext.read("$.length()");
+...
+documentContext.read("$..id");
+...
+documentContext.read("$..amount");
+Check out these new JsonPath expressions!
+
+documentContext.read("$.length()") calculates the length of the array.
+
+.read("$..id") retrieves the list of all id values returned, while .read("$..amount") collects all amounts returned.
+
+To learn more about JsonPath, a good place to start is here in the JsonPath documentation.
+
+assertThat(...).containsExactlyInAnyOrder(...)
+We haven't guaranteed the order of the CashCard list -- they come out in whatever order the database chooses to return them. Since we don't specify the order, containsExactlyInAnyOrder(...) asserts that while the list must contain everything we assert, the order does not matter.
+
+Run the tests.
+
+6: Pagination
+Let's now implement paging, starting with a test!
+
+We have 3 CashCards in our database. Let's set up a test to fetch them one at a time (page size of 1), then have their amounts sorted from highest to lowest (descending).
+
+Write the pagination test.
+
+Add the following test to CashCardApplicationTests, and note that we are adding parameters to the HTTP request of ?page=0&size=1. We will handle these in our Controller later.
+
+@Test
+void shouldReturnAPageOfCashCards() {
+    ResponseEntity<String> response = restTemplate.getForEntity("/cashcards?page=0&size=1", String.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    DocumentContext documentContext = JsonPath.parse(response.getBody());
+    JSONArray page = documentContext.read("$[*]");
+    assertThat(page.size()).isEqualTo(1);
+}
+Run the tests.
+
+When we run the tests we shouldn't be surprised that all CashCards are returned.
+
+expected: 1
+but was: 3
+Implement pagination in the CashCardController.
+
+So, let's add our new endpoint to the Controller! Add the following method to the CashCardController (don't delete the existing findAll() method):
+
+@GetMapping
+private ResponseEntity<List<CashCard>> findAll(Pageable pageable) {
+    Page<CashCard> page = cashCardRepository.findAll(
+            PageRequest.of(
+                    pageable.getPageNumber(),
+                    pageable.getPageSize()
+    ));
+    return ResponseEntity.ok(page.getContent());
+}
+Understand the pagination code.
+
+findAll(Pageable pageable)
+Pageable is yet another object that Spring Web provides for us. Since we specified the URI parameters of page=0&size=1, pageable will contain the values we need.
+
+PageRequest.of(
+  pageable.getPageNumber(),
+  pageable.getPageSize()
+));
+PageRequest is a basic Java Bean implementation of Pageable. Things that want paging and sorting implementation often support this, such as some types of Spring Data Repositories.
+
+Does our CashCardRepository support Paging and Sorting yet? Let's find out.
+
+Try to compile.
+
+When we run the tests we discover that our code doesn't even compile!
+
+[~/exercises] $ ./gradlew test
+...
+> Task :compileJava FAILED
+exercises/src/main/java/example/cashcard/CashCardController.java:50: error: method findAll in interface CrudRepository<T,ID> cannot be applied to given types;
+        Page<CashCard> page = cashCardRepository.findAll(
+                                                ^
+  required: no arguments
+  found:    PageRequest
+But of course! We haven't changed the Repository to extend the additional interface. So let's do that. In CashCardRepository.java, also extend PagingAndSortingRepository:
+
+Extend PagingAndSortingRepository and rerun tests.
+
+Update CashCardRepository to also extend PagingAndSortingRepository.
+
+Don't forget to add the new import!
+
+import org.springframework.data.repository.PagingAndSortingRepository;
+...
+
+interface CashCardRepository extends CrudRepository<CashCard, Long>, PagingAndSortingRepository<CashCard, Long> { ... }
+Now our repository does support Paging and Sorting.
+
+But our tests still fail! Search for the following failure:
+
+[~/exercises] $ ./gradlew test
+...
+Failed to load ApplicationContext
+java.lang.IllegalStateException: Failed to load ApplicationContext
+...
+Caused by: java.lang.IllegalStateException: Ambiguous mapping. Cannot map 'cashCardController' method
+example.cashcard.CashCardController#findAll(Pageable)
+to {GET [/cashcards]}: There is already 'cashCardController' bean method
+example.cashcard.CashCardController#findAll() mapped.
+(The actual output is immensely long. We've included the most helpful error message in the output above.)
+
+Understand and resolve the failure.
+
+So what happened?
+
+We didn't remove the existing findAll() Controller method!
+
+Why is this a problem? Don't we have unique method names and everything compiles?
+
+The problem is that we have two methods mapped to the same endpoint. Spring detects this error at runtime, during the Spring startup process.
+
+So let's remove the offending old findAll() method:
+
+// Delete this one:
+@GetMapping()
+private ResponseEntity<Iterable<CashCard>> findAll() {
+    return ResponseEntity.ok(cashCardRepository.findAll());
+}
+Run the tests and ensure that they pass.
+
+BUILD SUCCESSFUL in 7s
+Next, let's implement Sorting.
+
+7: Sorting
+We'd like the Cash Cards to come back in an order that makes sense to humans. So let's order them by amount in a descending order with the highest amounts first.
+
+Write a test (which we expect to fail).
+
+Add the following test to CashCardApplicationTests:
+
+@Test
+void shouldReturnASortedPageOfCashCards() {
+    ResponseEntity<String> response = restTemplate.getForEntity("/cashcards?page=0&size=1&sort=amount,desc", String.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    DocumentContext documentContext = JsonPath.parse(response.getBody());
+    JSONArray read = documentContext.read("$[*]");
+    assertThat(read.size()).isEqualTo(1);
+
+    double amount = documentContext.read("$[0].amount");
+    assertThat(amount).isEqualTo(150.00);
+}
+Understand the test.
+
+The URI we're requesting contains both pagination and sorting information: /cashcards?page=0&size=1&sort=amount,desc
+
+page=0: Get the first page. Page indexes start at 0.
+size=1: Each page has size 1.
+sort=amount,desc
+The extraction of data (using more JSONPath!) and accompanying assertions expect that the returned Cash Card is the $150.00 one.
+
+Do you think the test will pass? Before running it, try to figure out whether it will or not. If you think it won't pass, where do you think the failure will be?
+
+Run the test.
+
+[~/exercises] $ ./gradlew test
+...
+org.opentest4j.AssertionFailedError:
+ expected: 150.0
+  but was: 123.45
+The test expected to get the $150.00 Cash Card, but it got the $123.45 one. Why?
+
+The reason is that since we didn't specify a sort order, the cards are returned in the order they are returned from the database. And this happens to be the same as the order in which they were inserted.
+
+An important observation: Not all databases will act the same way. Now, it should make even more sense why we specify a sort order (instead of relying on the database's default order).
+
+Implement sorting in the Controller.
+
+Adding sorting to the Controller code is a super simple single line addition. In the CashCardController class, add an additional parameter to the PageRequest.of() call:
+
+PageRequest.of(
+     pageable.getPageNumber(),
+     pageable.getPageSize(),
+     pageable.getSort()
+));
+The getSort() method extracts the sort query parameter from the request URI.
+
+Run the tests again. They pass!
+
+CashCardApplicationTests > shouldReturnAllCashCardsWhenListIsRequested() PASSED
+Learn by breaking things.
+
+To get a little more confidence in the test, let's do an experiment.
+
+In the test, change the sort order from descending to ascending:
+
+ResponseEntity<String> response = restTemplate.getForEntity("/cashcards?page=0&size=1&sort=amount,asc", String.class);
+This should cause the test to fail because the first Cash Card in ascending order should be the $1.00 card. Run the tests and observe the failure:
+
+CashCardApplicationTests > shouldReturnASortedPageOfCashCards() FAILED
+org.opentest4j.AssertionFailedError:
+ expected: 150.0
+  but was: 1.0
+Correct! This result reinforces our confidence in the test. Instead of writing a whole new test, we used an existing one to run a little experiment.
+
+Now let's change the test back to request descending sort order so that it passes again.
+
+8: Paging and Sorting defaults
+We now have an endpoint which requires the client to send four pieces of information: The page index and size, the sort order, and direction. This is a lot to ask, so let's make it easier on them.
+
+Write a new test which doesn't send any pagination or sorting parameters.
+
+We'll add a new test that expects reasonable defaults for the parameters.
+
+The defaults will be:
+
+Sort by amount ascending.
+A page size of something larger than 3, so that all of our fixtures will be returned.
+@Test
+void shouldReturnASortedPageOfCashCardsWithNoParametersAndUseDefaultValues() {
+    ResponseEntity<String> response = restTemplate.getForEntity("/cashcards", String.class);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    DocumentContext documentContext = JsonPath.parse(response.getBody());
+    JSONArray page = documentContext.read("$[*]");
+    assertThat(page.size()).isEqualTo(3);
+
+    JSONArray amounts = documentContext.read("$..amount");
+    assertThat(amounts).containsExactly(1.00, 123.45, 150.00);
+}
+Run the tests.
+
+[~/exercises] $ ./gradlew test
+...
+Actual and expected have the same elements but not in the same order, at index 0 actual element was:
+  123.45
+whereas expected element was:
+  1.0
+The test failure shows:
+
+All the Cash Cards are being returned, since the (page.size()).isEqualTo(3) assertion succeeded.
+BUT: They are not sorted since the (amounts).containsExactly(1.00, 123.45, 150.00) assertion fails:
+Make the test pass.
+
+Change the implementation by adding a single line to the Controller method:
+
+...
+PageRequest.of(
+        pageable.getPageNumber(),
+        pageable.getPageSize(),
+        pageable.getSortOr(Sort.by(Sort.Direction.ASC, "amount"))
+));
+...
+Understand the implementation.
+
+So, what just happened?
+
+The answer is that the getSortOr() method provides default values for the page, size, and sort parameters. The default values come from two different sources:
+
+Spring provides the default page and size values (they are 0 and 20, respectively). A default of 20 for page size explains why all three of our Cash Cards were returned. Again: we didn't need to explicitly define these defaults. Spring provides them "out of the box".
+
+We defined the default sort parameter in our own code, by passing a Sort object to getSortOr():
+
+Sort.by(Sort.Direction.ASC, "amount")
+The net result is that if any of the three required parameters are not passed to the application, then reasonable defaults will be provided.
+
+Run the tests... again!
+
+Congratulations!
+
+Everything's passing now.
+
+[~/exercises] $ ./gradlew test
+...
+BUILD SUCCESSFUL in 7s
+
+1: Understand our Security Requirements
+Who should be allowed to manage any given Cash Card?
+
+In our simple domain, let's state that the user who created the Cash Card "owns" the Cash Card. Thus, they are the "card owner". Only the card owner can view or update a Cash Card.
+
+The logic will be something like this:
+
+IF the user is authenticated
+
+... AND they are authorized as a "card owner"
+
+... ... AND they own the requested Cash Card
+
+THEN complete the users's request
+
+BUT don't allow users to access Cash Cards they do not own.
